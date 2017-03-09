@@ -1,5 +1,6 @@
 tmux-safekill
 =============
+> This fork differs itself from the original [tmux-safekill][original] by ensuring that only processes belonging to the current tmux session get killed.
 
 A tmux plugin that attempts to safely kill processes before exiting a tmux session. Works with [TPM](https://github.com/tmux-plugins/tpm)
 
@@ -49,3 +50,4 @@ Reload TMUX environment:
 ### License
 
 [Apache 2](LICENSE)
+[original]:https://github.com/jlipps/tmux-safekill
