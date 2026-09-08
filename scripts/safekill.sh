@@ -1,12 +1,27 @@
 #!/usr/bin/env bash
 set -e
 
+# Returns 0 if the pane (by pane_pid) is running pi. Works even when pi is an
+# npm install, where pane_current_command reports "node" instead of "pi".
+function pane_runs_pi {
+  local pid="$1" cmd child
+  cmd=$(ps -ww -o command= -p "$pid" 2>/dev/null)
+  if [[ "$cmd" =~ (^|/)(pi)([[:space:]]|$) || "$cmd" == *pi-coding-agent* ]]; then
+    return 0
+  fi
+  for child in $(pgrep -P "$pid" 2>/dev/null); do
+    pane_runs_pi "$child" && return 0
+  done
+  return 1
+}
+
 function safe_end_procs {
   old_ifs="$IFS"
   IFS=$'\n'
   for pane_set in $1; do
     pane_id=$(echo "$pane_set" | awk -F " " '{print $1}')
     pane_proc=$(echo "$pane_set" | awk -F " " '{print tolower($2)}')
+    pane_pid=$(echo "$pane_set" | awk -F " " '{print $3}')
     cmd="C-c"
     if [[ "$pane_proc" == "vim" ]] || [[ "$pane_proc" == "nvim" ]]; then
       cmd='":qa" Enter'
@@ -18,8 +33,9 @@ function safe_end_procs {
       cmd='Enter "~."'
     elif [[ "$pane_proc" == "psql" ]]; then
       cmd='Enter "\q"'
-    elif [[ "$pane_proc" == "pi" ]]; then
-      cmd='Escape Escape 0 C "/quit" Enter'
+    elif [[ "$pane_proc" == "pi" ]] || pane_runs_pi "$pane_pid"; then
+      # Escape x2: interrupt any running request, then run /quit
+      cmd='Escape Escape "/quit" Enter'
     fi
     echo $cmd | xargs tmux send-keys -t "$pane_id"
   done
@@ -28,7 +44,7 @@ function safe_end_procs {
 
 function safe_kill_panes_of_current_session {
   session_name=$(tmux display-message -p '#S')
-  current_panes=$(tmux list-panes -a -F "#{pane_id} #{pane_current_command} #{session_name}\n" | grep "$session_name")
+  current_panes=$(tmux list-panes -a -F "#{pane_id} #{pane_current_command} #{pane_pid} #{session_name}\n" | grep "$session_name")
 
   SAVEIFS="$IFS"
   IFS=$'\n'
