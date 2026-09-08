@@ -18,6 +18,8 @@ function safe_end_procs {
       cmd='Enter "~."'
     elif [[ "$pane_proc" == "psql" ]]; then
       cmd='Enter "\q"'
+    elif [[ "$pane_proc" == "pi" ]]; then
+      cmd='Escape Escape 0 C "/quit" Enter'
     fi
     echo $cmd | xargs tmux send-keys -t "$pane_id"
   done
