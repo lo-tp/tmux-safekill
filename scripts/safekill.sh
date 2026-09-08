@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
+# Session is passed by the key binding (the session where the key was pressed).
+# "w" (window-only variant) carries no session; fall back to the legacy behavior.
+if [ "${1:-}" = "w" ]; then
+  SESSION=""
+else
+  SESSION="${1:-}"
+fi
+
 # Returns 0 if the pane (by pane_pid) is running pi. Works even when pi is an
 # npm install, where pane_current_command reports "node" instead of "pi".
 function pane_runs_pi {
@@ -43,7 +51,13 @@ function safe_end_procs {
 }
 
 function safe_kill_panes_of_current_session {
-  session_name=$(tmux display-message -p '#S')
+  # Prefer the session passed from the binding; fall back to the legacy
+  # resolution (first session on the server) when none was given.
+  if [ -n "$SESSION" ]; then
+    session_name="$SESSION"
+  else
+    session_name=$(tmux display-message -p '#S')
+  fi
   current_panes=$(tmux list-panes -a -F "#{pane_id} #{pane_current_command} #{pane_pid} #{session_name}\n" | grep "$session_name")
 
   SAVEIFS="$IFS"
